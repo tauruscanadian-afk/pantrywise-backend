@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PantryWise – AI Meal Planner</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, 'Helvetica Neue', sans-serif; background: #f7f6f2; margin: 0; padding: 1rem; }
+        .container { max-width: 800px; margin: 0 auto; background: white; border-radius: 2rem; padding: 2rem; box-shadow: 0 8px 20px rgba(0,0,0,0.05); }
+        h1 { font-size: 2rem; color: #2C6E49; }
+        .upload-area { border: 2px dashed #ccc; border-radius: 1rem; padding: 1.5rem; text-align: center; cursor: pointer; margin: 1rem 0; background: #faf9f6; transition: 0.2s; }
+        .upload-area:hover { border-color: #2C6E49; background: #fffdf9; }
+        .thumbnails { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; }
+        .thumbnail { position: relative; width: 80px; height: 80px; border-radius: 0.75rem; overflow: hidden; background: #e2e2e2; }
+        .thumbnail img { width: 100%; height: 100%; object-fit: cover; }
+        .remove-img { position: absolute; top: -6px; right: -6px; background: rgba(0,0,0,0.6); color: white; border-radius: 20px; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; }
+        textarea, button { width: 100%; padding: 0.8rem; margin: 0.5rem 0; border-radius: 1rem; border: 1px solid #ddd; font-family: inherit; }
+        button { background: #2C6E49; color: white; font-weight: bold; border: none; cursor: pointer; transition: 0.2s; }
+        button:disabled { background: #aaa; cursor: not-allowed; }
+        button.secondary { background: #F4A261; }
+        .ingredient-tag { display: inline-block; background: #e9f3ef; padding: 0.2rem 0.8rem; border-radius: 2rem; margin: 0.2rem; font-size: 0.85rem; }
+        .recipe-card { border: 1px solid #eee; border-radius: 1rem; padding: 1rem; margin: 1rem 0; background: #fefaf5; }
+        .preview-area { background: #f9f7f4; border-radius: 1rem; padding: 1rem; margin: 1rem 0; }
+        .mono { font-family: 'SF Mono', monospace; }
+        @media (max-width: 600px) { .container { padding: 1rem; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🥬 PantryWise</h1>
+    <p>Snap your fridge → AI finds ingredients → get 5 family recipes ($2.99)</p>
+
+    <div id="uploadZone" class="upload-area">
+        📸 Click or drag photos (max 3)
+        <input type="file" id="fileInput" accept="image/*" multiple style="display:none;">
+        <div id="thumbnails" class="thumbnails"></div>
+    </div>
+
+    <textarea id="extraIngredients" placeholder="Extra ingredients (optional, comma separated): onion, pasta, olive oil..."></textarea>
+
+    <button id="scanBtn">✨ Scan & identify ingredients (free)</button>
+    <div id="previewArea" class="preview-area" style="display:none;"></div>
+
+    <button id="unlockBtn" disabled>🔓 Unlock full recipes – $2.99</button>
+    <div id="recipeResults"></div>
+</div>
+
+<script>
+    let selectedFiles = [];
+    let detectedIngredients = [];
+    let scanDone = false;
+
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const thumbContainer = document.getElementById('thumbnails');
+    const extraTextarea = document.getElementById('extraIngredients');
+    const scanBtn = document.getElementById('scanBtn');
+    const unlockBtn = document.getElementById('unlockBtn');
+    const previewDiv = document.getElementById('previewArea');
+    const recipeDiv = document.getElementById('recipeResults');
+
+    uploadZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+        selectedFiles = Array.from(e.target.files).slice(0, 3);
+        renderThumbnails();
+        scanDone = false;
+        unlockBtn.disabled = true;
+        previewDiv.style.display = 'none';
+        recipeDiv.innerHTML = '';
+    });
+
+    function renderThumbnails() {
+        thumbContainer.innerHTML = '';
+        selectedFiles.forEach((file, idx) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const div = document.createElement('div');
+                div.className = 'thumbnail';
+                div.innerHTML = `<img src="${e.target.result}"><div class="remove-img" data-idx="${idx}">✕</div>`;
+                thumbContainer.appendChild(div);
+                div.querySelector('.remove-img').addEventListener('click', () => {
+                    selectedFiles.splice(idx, 1);
+                    renderThumbnails();
+                    scanDone = false;
+                    unlockBtn.disabled = true;
+                    previewDiv.style.display = 'none';
+                });
+            };
+            reader.readAsDataURL(file);
+        });
+        if (selectedFiles.length === 0) thumbContainer.innerHTML = '<div style="color:#888;">No images added</div>';
+    }
+
+    async function scanImages() {
+        if (selectedFiles.length === 0) return alert('Please upload at least one photo.');
+        scanBtn.disabled = true;
+        scanBtn.innerHTML = 'Scanning...';
+        try {
+            const imagesBase64 = [];
+            for (const file of selectedFiles) {
+                const base64 = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                    reader.readAsDataURL(file);
+                });
+                imagesBase64.push(base64);
+            }
+            const res = await fetch('/api/scan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ images: imagesBase64 })
+            });
+            const data = await res.json();
+            if (data.ingredients) {
+                detectedIngredients = data.ingredients;
+                const extra = extraTextarea.value.trim().split(',').map(s => s.trim().toLowerCase()).filter(s => s);
+                detectedIngredients.push(...extra);
+                detectedIngredients = [...new Set(detectedIngredients)];
+                previewDiv.innerHTML = `<strong>✅ Detected ingredients:</strong><br> ${detectedIngredients.map(i => `<span class="ingredient-tag">${escapeHtml(i)}</span>`).join('')}`;
+                previewDiv.style.display = 'block';
+                scanDone = true;
+                unlockBtn.disabled = false;
+            } else {
+                alert('Scan failed: ' + (data.error || 'Unknown error'));
+            }
+        } catch (err) {
+            alert('Error: ' + err.message);
+        } finally {
+            scanBtn.disabled = false;
+            scanBtn.innerHTML = '✨ Scan & identify ingredients (free)';
+        }
+    }
+
+    scanBtn.addEventListener('click', scanImages);
+
+    unlockBtn.addEventListener('click', async () => {
+        if (!scanDone || detectedIngredients.length === 0) {
+            alert('Please scan ingredients first.');
+            return;
+        }
+        sessionStorage.setItem('pendingIngredients', JSON.stringify(detectedIngredients));
+        const res = await fetch('/create-checkout', { method: 'POST' });
+        const data = await res.json();
+        if (data.url) {
+            window.location.href = data.url;
+        } else {
+            alert('Payment error: ' + (data.error || ''));
+        }
+    });
+
+    async function handlePaymentSuccess() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('payment_success') === '1') {
+            window.history.replaceState({}, document.title, window.location.pathname);
+            const ingredientsJson = sessionStorage.getItem('pendingIngredients');
+            if (!ingredientsJson) return;
+            const ingredients = JSON.parse(ingredientsJson);
+            recipeDiv.innerHTML = '⏳ Generating recipes...';
+            try {
+                const res = await fetch('/api/recipes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ingredients })
+                });
+                const data = await res.json();
+                if (data.recipes) {
+                    recipeDiv.innerHTML = '<h3>🍳 Your personalized recipes</h3>' + data.recipes.map(r => `
+                        <div class="recipe-card">
+                            <strong>${escapeHtml(r.name)}</strong> · ${escapeHtml(r.cookTime)}<br>
+                            👶 Kid rating: ${'★'.repeat(r.kidRating)}${'☆'.repeat(5-r.kidRating)}<br>
+                            🛒 Missing: ${escapeHtml(r.missingItems)}<br>
+                            ♻️ Leftover tip: ${escapeHtml(r.leftoverTip)}
+                        </div>
+                    `).join('');
+                    sessionStorage.removeItem('pendingIngredients');
+                } else {
+                    recipeDiv.innerHTML = 'Error: ' + (data.error || 'Failed');
+                }
+            } catch (err) {
+                recipeDiv.innerHTML = 'Error generating recipes.';
+            }
+        }
+    }
+
+    function escapeHtml(str) { return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+
+    handlePaymentSuccess();
+    renderThumbnails();
+</script>
+</body>
+</html>
