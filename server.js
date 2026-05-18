@@ -54,15 +54,18 @@ app.post('/create-checkout', async (req, res) => {
 // Scan ingredients using GPT-4 Vision
 app.post('/api/scan', async (req, res) => {
   const { images } = req.body;
-  if (!images || !images.length) return res.status(400).json({ error: 'No images' });
+  if (!images || !images.length) return res.status(400). json({ error: 'No images' });
 
   try {
     const content = [{ type: "text", text: "Identify visible food ingredients. Return comma‑separated list. No extra text." }];
     for (const base64 of images) {
-      content.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64}`, detail: "low" } });
+      content.push({
+        type: "image_url",
+        image_url: { url: `data:image/jpeg;base64,${base64}`, detail: "low" }
+      });
     }
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4o-mini",   // ← CHANGE THIS LINE
       messages: [{ role: "user", content }],
       max_tokens: 300,
       temperature: 0.2,
@@ -71,8 +74,8 @@ app.post('/api/scan', async (req, res) => {
     const ingredients = raw.split(',').map(i => i.trim().toLowerCase()).filter(i => i);
     res.json({ ingredients });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Vision scan failed' });
+    console.error('OpenAI error:', err);   // ← ADD THIS to see detailed error in Railway logs
+    res.status(500).json({ error: 'Vision scan failed: ' + err.message });
   }
 });
 
