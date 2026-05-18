@@ -2,47 +2,187 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PantryWise – AI Meal Planner</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>PantryWise – AI meal planner from your fridge</title>
     <style>
-        * { box-sizing: border-box; }
-        body { font-family: system-ui, -apple-system, 'Helvetica Neue', sans-serif; background: #f7f6f2; margin: 0; padding: 1rem; }
-        .container { max-width: 800px; margin: 0 auto; background: white; border-radius: 2rem; padding: 2rem; box-shadow: 0 8px 20px rgba(0,0,0,0.05); }
-        h1 { font-size: 2rem; color: #2C6E49; }
-        .upload-area { border: 2px dashed #ccc; border-radius: 1rem; padding: 1.5rem; text-align: center; cursor: pointer; margin: 1rem 0; background: #faf9f6; transition: 0.2s; }
-        .upload-area:hover { border-color: #2C6E49; background: #fffdf9; }
-        .thumbnails { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; }
-        .thumbnail { position: relative; width: 80px; height: 80px; border-radius: 0.75rem; overflow: hidden; background: #e2e2e2; }
-        .thumbnail img { width: 100%; height: 100%; object-fit: cover; }
-        .remove-img { position: absolute; top: -6px; right: -6px; background: rgba(0,0,0,0.6); color: white; border-radius: 20px; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; }
-        textarea, button { width: 100%; padding: 0.8rem; margin: 0.5rem 0; border-radius: 1rem; border: 1px solid #ddd; font-family: inherit; }
-        button { background: #2C6E49; color: white; font-weight: bold; border: none; cursor: pointer; transition: 0.2s; }
-        button:disabled { background: #aaa; cursor: not-allowed; }
-        button.secondary { background: #F4A261; }
-        .ingredient-tag { display: inline-block; background: #e9f3ef; padding: 0.2rem 0.8rem; border-radius: 2rem; margin: 0.2rem; font-size: 0.85rem; }
-        .recipe-card { border: 1px solid #eee; border-radius: 1rem; padding: 1rem; margin: 1rem 0; background: #fefaf5; }
-        .preview-area { background: #f9f7f4; border-radius: 1rem; padding: 1rem; margin: 1rem 0; }
-        .mono { font-family: 'SF Mono', monospace; }
-        @media (max-width: 600px) { .container { padding: 1rem; } }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: system-ui, -apple-system, 'Helvetica Neue', Helvetica, 'Segoe UI', Roboto, sans-serif;
+            background: #f7f6f2;
+            margin: 0;
+            padding: 1rem;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 2rem;
+            padding: 2rem;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+        }
+        h1 {
+            font-size: 2rem;
+            color: #2C6E49;
+            margin-bottom: 0.5rem;
+        }
+        .subhead {
+            color: #5b6e6b;
+            margin-bottom: 1.8rem;
+            border-left: 3px solid #F4A261;
+            padding-left: 1rem;
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            margin: 1rem 0;
+            background: #faf9f6;
+            transition: 0.2s;
+        }
+        .upload-area:hover {
+            border-color: #2C6E49;
+            background: #fffdf9;
+        }
+        .thumbnails {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+        .thumbnail {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            background: #e2e2e2;
+        }
+        .thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .remove-img {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            border-radius: 20px;
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        textarea, button, select {
+            width: 100%;
+            padding: 0.8rem;
+            margin: 0.5rem 0;
+            border-radius: 1rem;
+            border: 1px solid #ddd;
+            font-family: inherit;
+            font-size: 1rem;
+        }
+        button {
+            background: #2C6E49;
+            color: white;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        button:disabled {
+            background: #aaa;
+            cursor: not-allowed;
+        }
+        .secondary {
+            background: #F4A261;
+        }
+        .ingredient-tag {
+            display: inline-block;
+            background: #e9f3ef;
+            padding: 0.2rem 0.8rem;
+            border-radius: 2rem;
+            margin: 0.2rem;
+            font-size: 0.85rem;
+        }
+        .recipe-card {
+            border: 1px solid #eee;
+            border-radius: 1rem;
+            padding: 1rem;
+            margin: 1rem 0;
+            background: #fefaf5;
+        }
+        .preview-area {
+            background: #f9f7f4;
+            border-radius: 1rem;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        .price-option {
+            background: #f1f5f9;
+            border-radius: 1rem;
+            padding: 0.5rem 1rem;
+            margin: 0.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            cursor: pointer;
+        }
+        .price-option input {
+            width: auto;
+            margin: 0;
+        }
+        .price-option label {
+            flex: 1;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .mono {
+            font-family: 'SF Mono', monospace;
+        }
+        @media (max-width: 600px) {
+            .container { padding: 1rem; }
+        }
     </style>
 </head>
 <body>
 <div class="container">
     <h1>🥬 PantryWise</h1>
-    <p>Snap your fridge → AI finds ingredients → get 5 family recipes ($2.99)</p>
+    <div class="subhead">Snap your fridge → AI finds ingredients → get personalized recipes</div>
 
     <div id="uploadZone" class="upload-area">
-        📸 Click or drag photos (max 3)
+        📸 Click or drag photos of your fridge/pantry (max 3)
         <input type="file" id="fileInput" accept="image/*" multiple style="display:none;">
         <div id="thumbnails" class="thumbnails"></div>
     </div>
 
-    <textarea id="extraIngredients" placeholder="Extra ingredients (optional, comma separated): onion, pasta, olive oil..."></textarea>
+    <textarea id="extraIngredients" rows="2" placeholder="Extra ingredients (optional, comma separated): onion, pasta, olive oil..."></textarea>
 
     <button id="scanBtn">✨ Scan & identify ingredients (free)</button>
     <div id="previewArea" class="preview-area" style="display:none;"></div>
 
-    <button id="unlockBtn" disabled>🔓 Unlock full recipes – $2.99</button>
+    <!-- Pricing options -->
+    <div style="margin: 1rem 0;">
+        <strong>Select recipe pack:</strong>
+        <div class="price-option">
+            <input type="radio" name="recipePack" id="pack5" value="price_5_recipes" checked>
+            <label for="pack5">5 recipes – <span class="mono">$2.99</span></label>
+        </div>
+        <div class="price-option">
+            <input type="radio" name="recipePack" id="pack10" value="price_10_recipes">
+            <label for="pack10">10 recipes – <span class="mono">$4.99</span></label>
+        </div>
+    </div>
+
+    <button id="unlockBtn" disabled>🔓 Unlock recipes</button>
     <div id="recipeResults"></div>
 </div>
 
@@ -139,13 +279,23 @@
             alert('Please scan ingredients first.');
             return;
         }
+        // Get selected pack
+        const selectedPack = document.querySelector('input[name="recipePack"]:checked').value;
         sessionStorage.setItem('pendingIngredients', JSON.stringify(detectedIngredients));
-        const res = await fetch('/create-checkout', { method: 'POST' });
-        const data = await res.json();
-        if (data.url) {
-            window.location.href = data.url;
-        } else {
-            alert('Payment error: ' + (data.error || ''));
+        try {
+            const res = await fetch('/create-checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ priceId: selectedPack })
+            });
+            const data = await res.json();
+            if (data.url) {
+                window.location.href = data.url;
+            } else {
+                alert('Payment error: ' + (data.error || ''));
+            }
+        } catch (err) {
+            alert('Network error: ' + err.message);
         }
     });
 
