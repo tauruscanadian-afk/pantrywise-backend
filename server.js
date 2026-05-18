@@ -62,7 +62,7 @@ app.post('/api/scan', async (req, res) => {
       content.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64}`, detail: "low" } });
     }
     const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo",
+      model: "gpt-4o-mini",
       messages: [{ role: "user", content }],
       max_tokens: 300,
       temperature: 0.2,
